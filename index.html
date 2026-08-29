@@ -235,19 +235,20 @@
         return;
     }
 
-    // ===== 3. 微信/QQ 或 非HTTPS target: 保持原有指引/跳转 =====
-    // (QQ 回到引导页: QQ 对自动 iframe 内嵌的 .lol/风险落地内容会判"危险网站"弹红标,
-    //  改为与微信一致, 只展示复制链接引导页, 不再自动内嵌或跳转到落地域,
-    //  QQ 无法自动拉起系统浏览器, 引导用户复制后用系统浏览器访问即可免红标)
-    if (inWeChat || inQQ || !/^https:\/\//i.test(target)) {
+    // ===== 3. 非HTTPS target: 保持原有指引/跳转 =====
+    // (落地 target 已在上面统一升级为 https, 此处仅兜底非https情况)
+    if (!/^https:\/\//i.test(target)) {
         redirNormal();
         return;
     }
 
-    // ===== 4. 普通浏览器 + HTTPS target: 点击后才内嵌落地 =====
-    // 关键改动: 不在页面加载时自动 iframe 内嵌落地域名, 改为用户点击"打开"后再内嵌。
-    // QQ 内容安全爬虫(非 MQQBrowser UA)首次 GET 本页时, 若自动内嵌已染标的 .lol 落地域,
-    // 会被嗅探到并整链判定风险 → 用户拿不到盾页直接红屏。改为点击触发后, 爬虫首访只见静态页, 无法命中风险落地域。
+    // ===== 4. 所有 HTTPS target (普通浏览器/微信/QQ): 点击"继续访问/打开"后才内嵌落地 =====
+    // 关键点: 不在页面加载时自动 iframe 内嵌落地域名, 改为用户点击后才内嵌。
+    // 平台内容安全爬虫(非用户UA)首次 GET 本页时只看到静态引导页, 不触发对风险落地域的加载,
+    // 因此不会整链被判风险 → 保持防红, 不会红屏。
+    // 微信/QQ 也统一走此分支: 用户扫码后点过平台"继续访问"才到本页(已是人工操作),
+    // 点击后再 iframe 内嵌落地, 地址栏保持白名单盾域, 网站内容直接可见,
+    // 不再只显示复制链接引导页(避免"扫码点继续访问内容缺失"感知)。
     function openEmbed() {
         // 覆盖 http 混载: 内嵌落地一律 https, 地址栏保持 github.io 白名单域, 规避安卓"继续访问"
         var fw = document.createElement('div');
@@ -273,9 +274,19 @@
         $('guideTitle').textContent = '页面加载完成';
         $('guideDesc').innerHTML = '请点击下方按钮继续访问，若无反应可检查网络后重试';
         var ld = $('linkDisplay'); if (ld) { ld.style.display = 'none'; }
-        var bc = $('btnCopy'); if (bc) { bc.style.display = 'none'; }
+        var bc = $('btnCopy');
+        if (bc) {
+            // 微信/QQ 内保留"复制链接"作为兜底(若内嵌被平台拦截, 可复制到系统浏览器打开)
+            if (inWeChat || inQQ) {
+                bc.style.display = 'block';
+                bc.textContent = '复制链接，到浏览器打开';
+                bc.onclick = function () { copyToClipboard(shieldUrl); };
+            } else {
+                bc.style.display = 'none';
+            }
+        }
         var bj = $('btnJump');
-        bj.textContent = '打开';
+        bj.textContent = (inWeChat || inQQ) ? '继续访问' : '打开';
         bj.onclick = openEmbed;
         return;
     }
