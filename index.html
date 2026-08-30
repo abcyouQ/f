@@ -107,7 +107,7 @@
     .longpress-text { color: #fff; margin-top: 20px; font-size: 14px; }
     .hidden { display: none !important; }
     /* iframe 内嵌落地(全部 HTTPS target): 地址栏保持 github.io 白名单盾域,
-       绝不顶层跳转到无备案境外落地域 wudidewo.lol —— 那个动作会被微信/QQ 风控拦截导致"加载失败"。 */
+       绝不顶层跳转到无备案境外落地域 —— 那个动作会被微信/QQ 风控拦截导致"加载失败"。 */
     .frame-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; background: #fff; }
     .frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
     /* 右下角折叠悬浮按钮: 内嵌落地后仍保留"复制链接/系统浏览器打开"兜底能力 */
@@ -211,7 +211,7 @@
         target = target.replace(/^http:\/\//i, 'https://');
     }
 
-    // 引导页"复制链接"复制本盾页地址(github.io/?c=...)而非解码后的 .lol 风险域名:
+    // 引导页"复制链接"复制本盾页地址(github.io/?c=...)而非解码后的落地风险域名:
     // 访客在系统浏览器打开盾页地址 -> 盾页内嵌落地内容, 地址栏保持白名单盾域, 不弹"继续访问"。
     var shieldUrl = location.origin + location.pathname + location.search;
 
@@ -260,7 +260,7 @@
     }
 
     // ===== 4. 全部 HTTPS target: 一律 iframe 内嵌落地, 绝不顶层跳转风险域 =====
-    // 关键: 微信/QQ 对"顶层页面跳转到无备案境外域(wudidewo.lol)"做风险拦截 -> 加载失败。
+    // 关键: 微信/QQ 对"顶层页面跳转到无备案境外落地域"做风险拦截 -> 加载失败。
     // 因此这里地址栏始终保持在 github.io 白名单盾域, 落地内容用 iframe 内嵌显示。
     // 用户点击"继续访问"后才内嵌(平台内容安全爬虫首次 GET 本页只看到静态引导页,
     // 不触发对风险落地域的加载 -> 保持防红不红屏)。内嵌后右下角保留复制链接兜底。
