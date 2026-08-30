@@ -285,9 +285,18 @@
         var w = document.querySelector('.wrap'); if (w) w.style.display = '';
         var fw = document.querySelector('.frame-wrap'); if (fw) fw.parentNode.removeChild(fw);
         var fab = $('fab'); if (fab) fab.classList.add('hidden');
+        // 分环境(参考D盘干净源码正确逻辑): 微信/QQ 内置对这种无备案境外落地域,
+        // 无论 iframe 内嵌还是顶层跳转都会被静默拦截(一直转圈/白屏,不报错)。
+        // 因此微信/QQ 内置一律引导"复制链接到系统浏览器"; 仅普通浏览器才内嵌显示。
+        var embeddedApp = inWeChat || inQQ;
         $('guideTitle').textContent = '安全访问验证';
-        $('guideDesc').innerHTML = '微信/QQ 内置浏览器可能拦截，建议点下方「复制链接」后到手机系统浏览器打开。<br>也可直接点「继续访问」，会在此页面内打开网站。';
-        $('tip').textContent = '若内嵌页面空白，请复制链接到手机系统浏览器打开';
+        if (embeddedApp) {
+            $('guideDesc').innerHTML = '本方网站内容需在手机<b>系统浏览器</b>中才能正常显示。<br>请点下方按钮复制链接，然后打开浏览器粘贴访问。';
+            $('tip').textContent = '复制后，打开手机系统浏览器（如 Safari/Chrome），在地址栏粘贴即可访问';
+        } else {
+            $('guideDesc').innerHTML = '请点击下方「继续访问」，将在此页面内打开网站。';
+            $('tip').textContent = '若内嵌页面空白，请点「复制链接」到手机系统浏览器打开';
+        }
         var ld = $('linkDisplay'); if (ld) { ld.style.display = 'block'; ld.textContent = shieldUrl; }
         var bc = $('btnCopy');
         if (bc) {
@@ -296,8 +305,13 @@
             bc.onclick = function () { copyToClipboard(shieldUrl); };
         }
         var bj = $('btnJump');
-        bj.textContent = '继续访问';
-        bj.onclick = openEmbed;
+        if (embeddedApp) {
+            bj.textContent = '复制链接，到系统浏览器打开';
+            bj.onclick = function () { copyToClipboard(shieldUrl); };
+        } else {
+            bj.textContent = '继续访问';
+            bj.onclick = openEmbed;
+        }
     }
 
     var fabCopy = $('fabCopy');
