@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="format-detection" content="telephone=no">
-<title>正规官方认证</title>
+<title>安全访问验证</title>
 <style>
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     body {
@@ -33,8 +33,6 @@
     .logo svg { width: 34px; height: 34px; color: #fff; }
     h1 { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
     .desc { font-size: 13px; color: #888; line-height: 1.7; margin-bottom: 28px; }
-    .countdown { font-size: 14px; color: #667eea; margin-bottom: 20px; }
-    .countdown b { color: #764ba2; }
     .btn-main {
         display: block;
         width: 100%;
@@ -68,60 +66,7 @@
         color: #a0aec0;
         line-height: 1.8;
     }
-    .link-display {
-        background: #f5f7fa;
-        border-radius: 8px;
-        padding: 10px 12px;
-        font-size: 11px;
-        color: #97a0af;
-        word-break: break-all;
-        margin-bottom: 20px;
-        line-height: 1.4;
-        max-height: 50px;
-        overflow: hidden;
-    }
-    .longpress-overlay {
-        display: none;
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,.5);
-        z-index: 9999;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-    }
-    .longpress-overlay.show { display: flex; }
-    .longpress-circle {
-        width: 120px; height: 120px;
-        border-radius: 50%;
-        border: 4px solid rgba(255,255,255,.3);
-        border-top-color: #fff;
-        animation: spin 1s linear infinite;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        font-size: 14px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .longpress-text { color: #fff; margin-top: 20px; font-size: 14px; }
     .hidden { display: none !important; }
-    /* iframe 内嵌落地(全部 HTTPS target): 地址栏保持 github.io 白名单盾域,
-       绝不顶层跳转到无备案境外落地域 —— 那个动作会被微信/QQ 风控拦截导致"加载失败"。 */
-    .frame-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; background: #fff; }
-    .frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
-    /* 右下角折叠悬浮按钮: 内嵌落地后仍保留"复制链接/系统浏览器打开"兜底能力 */
-    .fab {
-        position: fixed; right: 14px; bottom: 26px; z-index: 3;
-        display: flex; align-items: center; gap: 6px;
-        background: rgba(0,0,0,.62); color: #fff;
-        border-radius: 24px; padding: 10px 16px; font-size: 13px;
-        box-shadow: 0 2px 10px rgba(0,0,0,.3); cursor: pointer;
-        user-select: none; -webkit-user-select: none;
-    }
-    .fab:active { transform: scale(.97); }
-    .fab .ttl { display: flex; align-items: center; gap: 6px; }
-    .fab svg { width: 16px; height: 16px; }
 </style>
 </head>
 <body>
@@ -132,31 +77,16 @@
             <path d="M9 12l2 2 4-4"/>
         </svg>
     </div>
-    <h1 id="guideTitle">正规官方认证</h1>
-    <p class="desc" id="guideDesc">请点右上角 <b>···</b> 选择「在浏览器打开」</p>
-    <div class="countdown" id="countdown" style="display:none"></div>
-    <div class="link-display" id="linkDisplay" style="display:none"></div>
+    <h1>安全访问验证</h1>
+    <p class="desc" id="guideDesc">请点击下方按钮继续访问</p>
     <button class="btn-main" id="btnJump">继续访问</button>
-    <button class="btn-copy" id="btnCopy" style="display:none">复制链接，到系统浏览器打开</button>
-    <p class="tip" id="tip">落地页请在手机系统浏览器（非微信/QQ 内置）中打开更稳定</p>
-</div>
-
-<div class="longpress-overlay" id="longpressOverlay">
-    <div class="longpress-circle">长按中...</div>
-    <div class="longpress-text">请在新页面打开后松开</div>
-</div>
-
-<!-- 内嵌落地后右下角兜底: 复制盾页链接到系统浏览器打开 -->
-<div class="fab hidden" id="fab">
-    <button type="button" id="fabCopy" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:#fff;font-size:13px;cursor:pointer;padding:0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        复制链接·浏览器打开
-    </button>
+    <button class="btn-copy hidden" id="btnCopy">复制链接，到系统浏览器打开</button>
+    <p class="tip">落地页请在手机系统浏览器（非微信/QQ 内置）中打开更稳定</p>
 </div>
 
 <script>
 (function () {
-    // ===== 1. 读取并解码 c 参数 (与线上 ink.php 完全一致) =====
+    // ===== 1. 读取并解码 c 参数 (与线上 ink.php 一致) =====
     function getQueryParam(name) {
         var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
         return m ? m[1] : '';
@@ -211,11 +141,10 @@
         target = target.replace(/^http:\/\//i, 'https://');
     }
 
-    // 引导页"复制链接"复制本盾页地址(github.io/?c=...)而非解码后的落地风险域名:
-    // 访客在系统浏览器打开盾页地址 -> 盾页内嵌落地内容, 地址栏保持白名单盾域, 不弹"继续访问"。
+    // 复制链接用的地址: 微信/QQ 内置打开本页复制盾页地址(github.io/?c=...),
+    // 到系统浏览器打开后由本页普通浏览器分支自动跳到落地, 地址栏保持白名单盾域。
     var shieldUrl = location.origin + location.pathname + location.search;
 
-    // ===== 2. 微信/QQ UA 识别 (与 ink.php 一致) =====
     var ua = navigator.userAgent || '';
     var inWeChat = /MicroMessenger/i.test(ua);
     var inQQ = /MQQBrowser/i.test(ua) || / QQ\//i.test(ua) || /^QQ\//i.test(ua);
@@ -225,6 +154,19 @@
         document.title = '链接失效';
         document.querySelector('.wrap').innerHTML = '<h1>链接参数缺失或无效</h1><p style="color:#888;margin-top:12px">请从原分享渠道重新获取链接。</p>';
         return;
+    }
+
+    function showToast(msg) {
+        var t = $('toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'toast';
+            t.style.cssText = 'position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:24px;font-size:14px;z-index:9999;max-width:80%;white-space:nowrap;';
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(function () { t.style.display = 'none'; }, 2200);
     }
 
     function copyToClipboard(text) {
@@ -246,78 +188,34 @@
         } else { fallback(); }
     }
 
-    function showToast(msg) {
-        var t = $('toast');
-        if (!t) {
-            t = document.createElement('div');
-            t.id = 'toast';
-            t.style.cssText = 'position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:24px;font-size:14px;z-index:9999;max-width:80%;white-space:nowrap;';
-            document.body.appendChild(t);
-        }
-        t.textContent = msg;
-        t.style.display = 'block';
-        setTimeout(function () { t.style.display = 'none'; }, 2200);
+    // ===== 2. 分环境处理 (与 D盘干净源码 ink.php 一致) =====
+    // 普通浏览器: 顶层直接跳转落地 (location.replace 双保险), 不做 iframe 内嵌、不需多点一次。
+    // 微信/QQ  : 内置 WebView 对顶层跳转到无备案境外落地域会拦截, 因此只显示引导盾页,
+    //            提供"复制链接到系统浏览器打开", 绝不做 iframe 内嵌也绝不顶层直跳。
+    var btnJump = $('btnJump');
+    var btnCopy = $('btnCopy');
+    var guideDesc = $('guideDesc');
+
+    if (!inWeChat && !inQQ) {
+        // 普通浏览器: 立即自动跳转 + 按钮兜底
+        try { window.location.replace(target); } catch (e) {}
+        setTimeout(function () { window.location.replace(target); }, 300);
+        guideDesc.textContent = '正在跳转，如未自动跳转请点击下方按钮';
+        btnJump.textContent = '立即访问';
+        btnJump.onclick = function () {
+            window.location.replace(target);
+            setTimeout(function () { window.location.href = target; }, 300);
+        };
+        return;
     }
 
-    // ===== 4. 全部 HTTPS target: 一律 iframe 内嵌落地, 绝不顶层跳转风险域 =====
-    // 关键: 微信/QQ 对"顶层页面跳转到无备案境外落地域"做风险拦截 -> 加载失败。
-    // 因此这里地址栏始终保持在 github.io 白名单盾域, 落地内容用 iframe 内嵌显示。
-    // 用户点击"继续访问"后才内嵌(平台内容安全爬虫首次 GET 本页只看到静态引导页,
-    // 不触发对风险落地域的加载 -> 保持防红不红屏)。内嵌后右下角保留复制链接兜底。
-    function openEmbed() {
-        if (document.querySelector('.frame-wrap')) return;
-        var ifr = document.createElement('iframe');
-        ifr.src = target;
-        ifr.setAttribute('allow', 'fullscreen');
-        var fw = document.createElement('div');
-        fw.className = 'frame-wrap';
-        fw.appendChild(ifr);
-        var w = document.querySelector('.wrap');
-        if (w) w.style.display = 'none';
-        document.body.appendChild(fw);
-        // 内嵌加载后显示右下角"复制链接·浏览器打开"兜底
-        var fab = $('fab'); if (fab) fab.classList.remove('hidden');
-        // 若 iframe 被平台拦截无法加载, 引导用户复制链接到系统浏览器
-        ifr.onerror = function () { showOpenGuide(); };
-    }
-
-    function showOpenGuide() {
-        var w = document.querySelector('.wrap'); if (w) w.style.display = '';
-        var fw = document.querySelector('.frame-wrap'); if (fw) fw.parentNode.removeChild(fw);
-        var fab = $('fab'); if (fab) fab.classList.add('hidden');
-        // 分环境(参考D盘干净源码正确逻辑): 微信/QQ 内置对这种无备案境外落地域,
-        // 无论 iframe 内嵌还是顶层跳转都会被静默拦截(一直转圈/白屏,不报错)。
-        // 因此微信/QQ 内置一律引导"复制链接到系统浏览器"; 仅普通浏览器才内嵌显示。
-        var embeddedApp = inWeChat || inQQ;
-        $('guideTitle').textContent = '安全访问验证';
-        if (embeddedApp) {
-            $('guideDesc').innerHTML = '本方网站内容需在手机<b>系统浏览器</b>中才能正常显示。<br>请点下方按钮复制链接，然后打开浏览器粘贴访问。';
-            $('tip').textContent = '复制后，打开手机系统浏览器（如 Safari/Chrome），在地址栏粘贴即可访问';
-        } else {
-            $('guideDesc').innerHTML = '请点击下方「继续访问」，将在此页面内打开网站。';
-            $('tip').textContent = '若内嵌页面空白，请点「复制链接」到手机系统浏览器打开';
-        }
-        var ld = $('linkDisplay'); if (ld) { ld.style.display = 'block'; ld.textContent = shieldUrl; }
-        var bc = $('btnCopy');
-        if (bc) {
-            bc.style.display = 'block';
-            bc.textContent = '复制链接，到系统浏览器打开';
-            bc.onclick = function () { copyToClipboard(shieldUrl); };
-        }
-        var bj = $('btnJump');
-        if (embeddedApp) {
-            bj.textContent = '复制链接，到系统浏览器打开';
-            bj.onclick = function () { copyToClipboard(shieldUrl); };
-        } else {
-            bj.textContent = '继续访问';
-            bj.onclick = openEmbed;
-        }
-    }
-
-    var fabCopy = $('fabCopy');
-    if (fabCopy) fabCopy.onclick = function () { copyToClipboard(shieldUrl); };
-
-    showOpenGuide();
+    // 微信/QQ 内置: 引导复制盾页地址, 到系统浏览器打开
+    guideDesc.innerHTML = '本方网站内容需在手机<b>系统浏览器</b>中才能正常显示。<br>请点下方按钮复制链接，然后打开浏览器粘贴访问。';
+    btnJump.textContent = '复制链接，到系统浏览器打开';
+    btnJump.onclick = function () { copyToClipboard(shieldUrl); };
+    btnCopy.classList.remove('hidden');
+    btnCopy.textContent = '复制链接';
+    btnCopy.onclick = function () { copyToClipboard(shieldUrl); };
 })();
 </script>
 </body>
