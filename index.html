@@ -67,6 +67,9 @@
         line-height: 1.8;
     }
     .hidden { display: none !important; }
+    /* 系统浏览器内嵌落地内容: 全屏 iframe, 保持地址栏在 github.io 白名单域名 */
+    .frame-wrap { position: fixed; inset: 0; z-index: 1; }
+    .frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
 </style>
 </head>
 <body>
@@ -188,24 +191,46 @@
         } else { fallback(); }
     }
 
-    // ===== 2. 分环境处理 (与 D盘干净源码 ink.php 一致) =====
-    // 普通浏览器: 顶层直接跳转落地 (location.replace 双保险), 不做 iframe 内嵌、不需多点一次。
+    // ===== 2. 分环境处理 =====
+    // 系统浏览器: 全屏 iframe 内嵌落地内容, 顶层地址栏保持 github.io 白名单盾域,
+    //            避免顶层跳转至无备案境外落地域触发系统浏览器"继续访问/离开界面"风险提示。
     // 微信/QQ  : 内置 WebView 对顶层跳转到无备案境外落地域会拦截, 因此只显示引导盾页,
-    //            提供"复制链接到系统浏览器打开", 绝不做 iframe 内嵌也绝不顶层直跳。
+    //            提供"复制链接到系统浏览器打开", 不做 iframe 内嵌也绝不顶层直跳。
     var btnJump = $('btnJump');
     var btnCopy = $('btnCopy');
     var guideDesc = $('guideDesc');
 
+    // 系统浏览器: 全屏 iframe 内嵌落地内容, 顶层地址栏保持 github.io 白名单盾域。
+    // 不做顶层 location.replace 跳转到风险落地域, 可避免系统浏览器"继续访问/离开界面"风险提示。
+    function openEmbed() {
+        if (document.querySelector('.frame-wrap')) return;
+        var ifr = document.createElement('iframe');
+        ifr.src = target;
+        ifr.setAttribute('allow', 'fullscreen');
+        ifr.setAttribute('allowfullscreen', '');
+        var fw = document.createElement('div');
+        fw.className = 'frame-wrap';
+        fw.appendChild(ifr);
+        var w = document.querySelector('.wrap');
+        if (w) w.style.display = 'none';
+        document.body.appendChild(fw);
+        // 若落地域拒绝内嵌(X-Frame-Options/Frame-Ancestors), 兜底显示引导按钮
+        ifr.onload = undefined;
+        setTimeout(function () {
+            var doc;
+            try { doc = ifr.contentDocument ? ifr.contentDocument : null; } catch (e) { doc = null; }
+            // 仅当内嵌被拦截时回退到引导页(由外层不可访问判定, 保守处理)
+            if (!doc) { if (fw.parentNode === document.body) fw.parentNode.removeChild(fw); if (w) w.style.display = ''; }
+        }, 800);
+    }
+
     if (!inWeChat && !inQQ) {
-        // 普通浏览器: 立即自动跳转 + 按钮兜底
-        try { window.location.replace(target); } catch (e) {}
-        setTimeout(function () { window.location.replace(target); }, 300);
-        guideDesc.textContent = '正在跳转，如未自动跳转请点击下方按钮';
-        btnJump.textContent = '立即访问';
-        btnJump.onclick = function () {
-            window.location.replace(target);
-            setTimeout(function () { window.location.href = target; }, 300);
-        };
+        // 普通浏览器: 自动内嵌 + 手动触发兜底
+        guideDesc.textContent = '正在加载内容，请稍候...';
+        btnJump.textContent = '加载中...';
+        btnJump.disabled = true;
+        setTimeout(openEmbed, 300);
+        btnJump.onclick = openEmbed;
         return;
     }
 
