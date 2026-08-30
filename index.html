@@ -214,14 +214,8 @@
         var w = document.querySelector('.wrap');
         if (w) w.style.display = 'none';
         document.body.appendChild(fw);
-        // 若落地域拒绝内嵌(X-Frame-Options/Frame-Ancestors), 兜底显示引导按钮
-        ifr.onload = undefined;
-        setTimeout(function () {
-            var doc;
-            try { doc = ifr.contentDocument ? ifr.contentDocument : null; } catch (e) { doc = null; }
-            // 仅当内嵌被拦截时回退到引导页(由外层不可访问判定, 保守处理)
-            if (!doc) { if (fw.parentNode === document.body) fw.parentNode.removeChild(fw); if (w) w.style.display = ''; }
-        }, 800);
+        // 落地内容为跨域 iframe, contentDocument 必然抛错, 不能用作拦截判定。
+        // 加载正常则保持内嵌; 若确有 X-Frame-Options 拦截, 界面会呼出错误处理, 不做自动移除。
     }
 
     if (!inWeChat && !inQQ) {
